@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="Starter HTML page" />
+    <title>Welcome — Index</title>
+    <style>
+        /* Minimal reset + simple layout */
+        :root {
+            --bg: #f7f8fb;
+            --card: #ffffff;
+            --accent: #0366d6;
+            --muted: #6b7280;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+        * { box-sizing: border-box; }
+        html,body { height:100%; margin:0; background:var(--bg); color:#111; }
+        .container { max-width:900px; margin:48px auto; padding:24px; }
+        header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+        header h1 { font-size:1.125rem; margin:0; }
+        nav a { color:var(--accent); text-decoration:none; margin-left:12px; font-weight:600; }
+        main { background:var(--card); padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(15,23,42,0.06); margin-top:18px; }
+        footer { margin-top:14px; color:var(--muted); font-size:0.9rem; text-align:center; }
+        @media (max-width:520px) {
+            .container { margin:20px; padding:16px; }
+            header { flex-direction:column; align-items:flex-start; gap:8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Index</h1>
+            <nav aria-label="Main navigation">
+                <a href="#">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+            </nav>
+        </header>
+
+        <main role="main">
+            <section>
+                <h2>Getting started</h2>
+                <p>This is a starter HTML template. Replace this content with your project.</p>
+            </section>
+
+            <section aria-labelledby="examples" style="margin-top:16px;">
+                <h3 id="examples">Examples</h3>
+                <ul>
+                    <li>Create pages in this folder and link them from the nav.</li>
+                    <li>Add styles in a separate CSS file or inside &lt;style&gt; for quick testing.</li>
+                </ul>
+            </section>
+        </main>
+
+        <footer>
+            © <span id="year"></span> Your Project
+        </footer>
+    </div>
+
+    <script>
+        // Small script to set the current year
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('year').textContent = new Date().getFullYear();
+        });
+    </script>
+</body>
+</html>
