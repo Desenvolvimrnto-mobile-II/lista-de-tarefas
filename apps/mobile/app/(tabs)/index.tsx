@@ -1,98 +1,97 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// apps/mobile/app/(tabs)/index.tsx
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { Link, useRouter, type Href } from 'expo-router';
+import { Tasks, type Task } from '@/src/lib/api'; // <-- alias @
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await Tasks.list();
+      setTasks(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      console.error(e?.message);
+      Alert.alert('Erro', 'Não foi possível carregar as tarefas.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text>Carregando tarefas...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>📋 Minhas Tarefas</Text>
+        {/* use literal direto: mantém typedRoutes feliz */}
+        <Link href="/tasks/new" style={styles.newBtn}>
+          + Nova
+        </Link>
+      </View>
+
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => String(item.id)}
+        onRefresh={fetchTasks}
+        refreshing={loading}
+        renderItem={({ item }) => {
+          // Objeto Href tipado para /tasks/[id]
+          const detailsHref: Href<'/tasks/[id]'> = {
+            pathname: '/tasks/[id]',
+            params: { id: String(item.id) },
+          };
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.8}
+              onPress={() => router.push(detailsHref)}
+            >
+              <Text style={styles.title}>{item.title}</Text>
+              {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
+              <Text style={styles.status}>
+                Status{' '}
+                <Text style={item.status === 'Concluída' ? styles.done : styles.pending}>
+                  {item.status}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={<Text style={styles.empty}>Nenhuma tarefa encontrada.</Text>}
+        contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : undefined}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, backgroundColor: '#F9FAFB', padding: 20, paddingTop: 60 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  header: { fontSize: 24, fontWeight: 'bold' },
+  newBtn: { backgroundColor: '#111827', color: '#fff', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, overflow: 'hidden', fontWeight: '700' },
+  card: { backgroundColor: '#fff', padding: 14, borderRadius: 12, marginTop: 12, elevation: 2 },
+  title: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
+  desc: { fontSize: 14, color: '#555' },
+  status: { marginTop: 8, fontSize: 12, color: '#888' },
+  done: { color: 'green', fontWeight: 'bold' },
+  pending: { color: 'orange', fontWeight: 'bold' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
+  empty: { textAlign: 'center', marginTop: 30, color: '#777' },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center' },
 });
