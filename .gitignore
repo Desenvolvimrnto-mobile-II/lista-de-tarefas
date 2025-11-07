@@ -1,0 +1,107 @@
+# =============================
+# 📦 MONOREPO GERAL
+# =============================
+
+# Node modules e caches
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.out/
+.next/
+.cache/
+.expo/
+expo-packager-cache/
+expo-app-loader-cache/
+
+# Logs e temporários
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment e secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*
+
+# Sistema de pacotes
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# =============================
+# ⚙️ BACKEND (apps/api)
+# =============================
+
+apps/api/database.sqlite
+apps/api/database.sqlite3
+apps/api/database/*.sqlite
+apps/api/database/*.db
+apps/api/.env
+apps/api/node_modules/
+apps/api/.vscode/
+
+# Arquivos temporários do nodemon
+apps/api/nodemon.json
+apps/api/*.pid
+
+# Docker e volumes locais
+apps/api/.docker/
+apps/api/docker-data/
+apps/api/tmp/
+apps/api/*.log
+
+# =============================
+# 📱 FRONTEND (apps/mobile)
+# =============================
+
+apps/mobile/.expo/
+apps/mobile/.expo-shared/
+apps/mobile/.gradle/
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/web-build/
+apps/mobile/.vscode/
+apps/mobile/node_modules/
+apps/mobile/npm-debug.log*
+apps/mobile/package-lock.json
+
+# Expo e Metro bundler
+apps/mobile/.bundle/
+apps/mobile/.expo/
+apps/mobile/expo-packager-cache/
+apps/mobile/expo-app-loader-cache/
+
+# Arquivos do sistema
+apps/mobile/.DS_Store
+apps/mobile/Thumbs.db
+
+# =============================
+# 🧠 IDEs e editores
+# =============================
+
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# =============================
+# 🧪 Testes e cobertura
+# =============================
+
+coverage/
+*.lcov
+jest-stare/
+__snapshots__/
