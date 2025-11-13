@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Tasks } from '@/src/lib/api';
 
@@ -9,19 +18,52 @@ export default function NewTaskScreen() {
   const [description, setDescription] = useState('');
 
   const save = async () => {
-    if (!title.trim()) return Alert.alert('Validação', 'Título é obrigatório.');
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+
+    if (!trimmedTitle) {
+      Alert.alert('Validação', 'Título é obrigatório.');
+      return;
+    }
+
+    // monta o payload respeitando o tipo do Tasks.create
+    const payload: { user_id: number; title: string; description?: string } = {
+      user_id: 1, // fixo para demo
+      title: trimmedTitle,
+    };
+
+    if (trimmedDescription) {
+      payload.description = trimmedDescription;
+    }
+
     try {
-      // user_id fixo=1 para demo
-      await Tasks.create({ user_id: 1, title: title.trim(), description: description.trim() || undefined });
-      router.back(); // volta para a lista
+      console.log('🔹 Enviando payload para criação:', payload);
+
+      const created = await Tasks.create(payload);
+
+      console.log('✅ Tarefa criada com sucesso:', created);
+
+      router.back(); // volta pra lista
     } catch (e: any) {
-      console.error(e?.message);
-      Alert.alert('Erro', 'Não foi possível criar a tarefa.');
+      console.error(
+        '❌ Erro ao criar tarefa:',
+        e?.response?.data || e?.message || e,
+      );
+
+      const msgApi =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        'Não foi possível criar a tarefa.';
+
+      Alert.alert('Erro', msgApi);
     }
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', android: undefined })}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.select({ ios: 'padding', android: undefined })}
+    >
       <View style={styles.container}>
         <Text style={styles.label}>Título</Text>
         <TextInput
@@ -51,7 +93,20 @@ export default function NewTaskScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB', padding: 20 },
   label: { fontSize: 14, fontWeight: '600', marginTop: 12 },
-  input: { backgroundColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 6 },
-  button: { backgroundColor: '#2563eb', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' }
+  input: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 6,
+  },
+  button: {
+    backgroundColor: '#2563eb',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

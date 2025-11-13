@@ -1,8 +1,16 @@
 // apps/mobile/app/(tabs)/index.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { Link, useRouter, type Href } from 'expo-router';
-import { Tasks, type Task } from '@/src/lib/api'; // <-- alias @
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { Link, useRouter, useFocusEffect } from 'expo-router';
+import { Tasks, type Task } from '@/src/lib/api';
 
 export default function HomeScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -10,23 +18,41 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const fetchTasks = useCallback(async () => {
-    setLoading(true);
     try {
+      setLoading(true);
+
       const data = await Tasks.list();
-      setTasks(Array.isArray(data) ? data : []);
+
+      // cobre os dois formatos: array direto ou { tasks: [...] }
+      const list: Task[] = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.tasks)
+        ? (data as any).tasks
+        : [];
+
+      console.log('📥 Tasks carregadas:', list);
+      setTasks(list);
     } catch (e: any) {
-      console.error(e?.message);
+      console.error('❌ Erro ao carregar tarefas:', e?.response?.data || e?.message || e);
       Alert.alert('Erro', 'Não foi possível carregar as tarefas.');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // primeira carga
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
-  if (loading) {
+  // recarrega sempre que a tela volta a ganhar foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchTasks();
+    }, [fetchTasks]),
+  );
+
+  if (loading && tasks.length === 0) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
@@ -39,7 +65,6 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>📋 Minhas Tarefas</Text>
-        {/* use literal direto: mantém typedRoutes feliz */}
         <Link href="/tasks/new" style={styles.newBtn}>
           + Nova
         </Link>
@@ -49,32 +74,38 @@ export default function HomeScreen() {
         data={tasks}
         keyExtractor={(item) => String(item.id)}
         onRefresh={fetchTasks}
-        refreshing={loading}
-        renderItem={({ item }) => {
-          // Objeto Href tipado para /tasks/[id]
-          const detailsHref: Href<'/tasks/[id]'> = {
-            pathname: '/tasks/[id]',
-            params: { id: String(item.id) },
-          };
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() => router.push(detailsHref)}
-            >
-              <Text style={styles.title}>{item.title}</Text>
-              {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
-              <Text style={styles.status}>
-                Status{' '}
-                <Text style={item.status === 'Concluída' ? styles.done : styles.pending}>
-                  {item.status}
-                </Text>
+        refreshing={loading && tasks.length > 0}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.8}
+            // cast para calar o TypeScript chato sem perder a navegação
+            onPress={() => router.push(`/tasks/${item.id}` as never)}
+          >
+            <Text style={styles.title}>{item.title}</Text>
+            {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
+            <Text style={styles.status}>
+              Status{' '}
+              <Text
+                style={
+                  item.status === 'Concluída'
+                    ? styles.done
+                    : styles.pending
+                }
+              >
+                {item.status}
               </Text>
-            </TouchableOpacity>
-          );
-        }}
-        ListEmptyComponent={<Text style={styles.empty}>Nenhuma tarefa encontrada.</Text>}
-        contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : undefined}
+            </Text>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          !loading ? (
+            <Text style={styles.empty}>Nenhuma tarefa encontrada.</Text>
+          ) : null
+        }
+        contentContainerStyle={
+          tasks.length === 0 ? styles.emptyContainer : undefined
+        }
       />
     </View>
   );
@@ -82,10 +113,29 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB', padding: 20, paddingTop: 60 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   header: { fontSize: 24, fontWeight: 'bold' },
-  newBtn: { backgroundColor: '#111827', color: '#fff', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, overflow: 'hidden', fontWeight: '700' },
-  card: { backgroundColor: '#fff', padding: 14, borderRadius: 12, marginTop: 12, elevation: 2 },
+  newBtn: {
+    backgroundColor: '#111827',
+    color: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    fontWeight: '700',
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 12,
+    elevation: 2,
+  },
   title: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
   desc: { fontSize: 14, color: '#555' },
   status: { marginTop: 8, fontSize: 12, color: '#888' },

@@ -1,15 +1,15 @@
-// apps/mobile/app/_layout.tsx
-import { Stack } from 'expo-router';
+// apps/mobile/app/(tabs)/_layout.tsx
+import { Tabs } from 'expo-router';
 
-export default function RootLayout() {
+export default function TabsLayout() {
   return (
-    <Stack>
-      {/* grupo de abas */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-      {/* rotas de tarefas */}
-      <Stack.Screen name="tasks/new" options={{ title: 'Nova Tarefa' }} />
-      <Stack.Screen name="tasks/[id]" options={{ title: 'Detalhes da Tarefa' }} />
-    </Stack>
+    <Tabs>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tarefas',
+        }}
+      />
+    </Tabs>
   );
 }

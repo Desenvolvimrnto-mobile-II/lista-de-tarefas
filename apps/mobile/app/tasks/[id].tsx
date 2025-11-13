@@ -1,7 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Tasks, Task } from '@/src/lib/api';
+import { Tasks, type Task } from '@/src/lib/api';
 
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,12 +29,13 @@ export default function TaskDetailsScreen() {
     try {
       setLoading(true);
       const data = await Tasks.get(taskId);
+
       setTask(data);
       setTitle(data.title);
       setDescription(data.description || '');
       setStatus((data.status as any) || 'A Fazer');
     } catch (e: any) {
-      console.error(e?.message);
+      console.error('❌ Erro ao carregar tarefa:', e?.response?.data || e?.message || e);
       Alert.alert('Erro', 'Não foi possível carregar a tarefa.');
       router.back();
     } finally {
@@ -38,45 +49,82 @@ export default function TaskDetailsScreen() {
 
   const toggleStatus = async () => {
     if (!task) return;
+
     const next = task.status === 'Concluída' ? 'A Fazer' : 'Concluída';
+
     try {
       const updated = await Tasks.update(task.id, { status: next });
       setTask(updated);
       setStatus(updated.status as any);
     } catch (e: any) {
-      console.error(e?.message);
+      console.error('❌ Erro ao alterar status:', e?.response?.data || e?.message || e);
       Alert.alert('Erro', 'Não foi possível alterar o status.');
     }
   };
 
   const save = async () => {
-    if (!title.trim()) return Alert.alert('Validação', 'Título é obrigatório.');
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+
+    if (!trimmedTitle) {
+      Alert.alert('Validação', 'Título é obrigatório.');
+      return;
+    }
+
+    const payload: { title: string; description?: string; status?: Task['status'] } = {
+      title: trimmedTitle,
+      status,
+    };
+
+    if (trimmedDescription) {
+      payload.description = trimmedDescription;
+    }
+
     try {
-      await Tasks.update(taskId, { title: title.trim(), description: description.trim() || undefined, status });
+      await Tasks.update(taskId, payload);
       Alert.alert('Sucesso', 'Tarefa atualizada.');
       router.back();
     } catch (e: any) {
-      console.error(e?.message);
+      console.error('❌ Erro ao salvar tarefa:', e?.response?.data || e?.message || e);
       Alert.alert('Erro', 'Não foi possível salvar.');
     }
   };
 
   const remove = async () => {
+    if (!task) return;
+
+    const doRemove = async () => {
+      try {
+        console.log('🗑️ Removendo tarefa id:', taskId);
+        await Tasks.remove(taskId);
+        router.back();
+      } catch (e: any) {
+        console.error('❌ Erro ao excluir tarefa:', e?.response?.data || e?.message || e);
+        Alert.alert('Erro', 'Não foi possível excluir.');
+      }
+    };
+
+    // Web: Alert não tem botões → usamos confirm()
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        const ok = window.confirm('Tem certeza que deseja excluir esta tarefa?');
+        if (ok) {
+          await doRemove();
+        }
+      }
+      return;
+    }
+
+    // Mobile: Alert bonitinho com botões
     Alert.alert('Excluir', 'Tem certeza que deseja excluir esta tarefa?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await Tasks.remove(taskId);
-            router.back();
-          } catch (e: any) {
-            console.error(e?.message);
-            Alert.alert('Erro', 'Não foi possível excluir.');
-          }
-        }
-      }
+        onPress: () => {
+          void doRemove();
+        },
+      },
     ]);
   };
 
@@ -110,19 +158,33 @@ export default function TaskDetailsScreen() {
         multiline
       />
 
-      <Text style={styles.label}>Status: <Text style={status === 'Concluída' ? styles.done : styles.pending}>{status}</Text></Text>
+      <Text style={styles.label}>
+        Status:{' '}
+        <Text style={status === 'Concluída' ? styles.done : styles.pending}>{status}</Text>
+      </Text>
 
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-        <TouchableOpacity onPress={toggleStatus} style={[styles.button, { backgroundColor: '#111827' }]}>
-          <Text style={styles.buttonText}>{status === 'Concluída' ? 'Marcar A Fazer' : 'Marcar Concluída'}</Text>
+        <TouchableOpacity
+          onPress={toggleStatus}
+          style={[styles.button, { backgroundColor: '#111827' }]}
+        >
+          <Text style={styles.buttonText}>
+            {status === 'Concluída' ? 'Marcar A Fazer' : 'Marcar Concluída'}
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={remove} style={[styles.button, { backgroundColor: '#dc2626' }]}>
+        <TouchableOpacity
+          onPress={remove}
+          style={[styles.button, { backgroundColor: '#dc2626' }]}
+        >
           <Text style={styles.buttonText}>Excluir</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={save} style={[styles.button, { backgroundColor: '#2563eb', marginTop: 16 }]}>
+      <TouchableOpacity
+        onPress={save}
+        style={[styles.button, { backgroundColor: '#2563eb', marginTop: 16 }]}
+      >
         <Text style={styles.buttonText}>Salvar</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -132,10 +194,23 @@ export default function TaskDetailsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB', padding: 20 },
   label: { fontSize: 14, fontWeight: '600', marginTop: 12 },
-  input: { backgroundColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 6 },
-  button: { padding: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flex: 1 },
+  input: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 6,
+  },
+  button: {
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
   buttonText: { color: '#fff', fontWeight: '700' },
   done: { color: 'green', fontWeight: 'bold' },
   pending: { color: 'orange', fontWeight: 'bold' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
 });
